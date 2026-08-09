@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DeepSeek 全量 Token 用量统计
 // @namespace    https://platform.deepseek.com/
-// @version      1.2.0
+// @version      1.3.0
 // @description  按时间分段汇总 DeepSeek API 的全部 Token 用量、请求数、缓存命中率和费用
 // @author       Codex
 // @match        https://platform.deepseek.com/usage*
@@ -461,7 +461,7 @@
   function formatCompactNumber(value) {
     const absolute = Math.abs(value);
     const units = [
-      [1_000_000_000, "B"],
+      [100_000_000, "亿"],
       [1_000_000, "M"],
       [1_000, "K"],
     ];
@@ -517,9 +517,9 @@
 
   function renderResults(elements, aggregate, startDate, endDate) {
     const { summary } = aggregate;
-    updateMetric(elements, "total", formatNumber(getTotalTokens(summary)));
-    updateMetric(elements, "input", formatNumber(getInputTokens(summary)));
-    updateMetric(elements, "output", formatNumber(summary.output));
+    updateMetric(elements, "total", formatCompactNumber(getTotalTokens(summary)));
+    updateMetric(elements, "input", formatCompactNumber(getInputTokens(summary)));
+    updateMetric(elements, "output", formatCompactNumber(summary.output));
     updateMetric(elements, "requests", formatNumber(summary.requests));
     updateMetric(elements, "hit-rate", percentFormatter.format(getCacheHitRate(summary)));
     updateMetric(elements, "cost", formatCosts(summary.costs, true));
@@ -534,10 +534,10 @@
         const values = [
           modelName,
           formatNumber(counters.requests),
-          formatNumber(counters.cacheHit),
-          formatNumber(counters.cacheMiss),
-          formatNumber(counters.output),
-          formatNumber(getTotalTokens(counters)),
+          formatCompactNumber(counters.cacheHit),
+          formatCompactNumber(counters.cacheMiss),
+          formatCompactNumber(counters.output),
+          formatCompactNumber(getTotalTokens(counters)),
           percentFormatter.format(getCacheHitRate(counters)),
           formatCosts(counters.costs),
         ];
@@ -570,9 +570,9 @@
       cell.classList.toggle("is-selected", cell.dataset.date === dateKey);
     });
     elements.dayDate.textContent = dateKey;
-    elements.dayTotal.textContent = formatNumber(getTotalTokens(counters));
-    elements.dayInput.textContent = formatNumber(getInputTokens(counters));
-    elements.dayOutput.textContent = formatNumber(counters.output);
+    elements.dayTotal.textContent = formatCompactNumber(getTotalTokens(counters));
+    elements.dayInput.textContent = formatCompactNumber(getInputTokens(counters));
+    elements.dayOutput.textContent = formatCompactNumber(counters.output);
     elements.dayRequests.textContent = formatNumber(counters.requests);
     elements.dayHitRate.textContent = percentFormatter.format(getCacheHitRate(counters));
   }
@@ -632,10 +632,11 @@
 
     state.calendarData = { monthText, aggregate };
     elements.calendarGrid.replaceChildren(...cells);
-    updateCalendarMetric(elements, "total", formatNumber(getTotalTokens(aggregate.summary)));
-    updateCalendarMetric(elements, "input", formatNumber(getInputTokens(aggregate.summary)));
-    updateCalendarMetric(elements, "output", formatNumber(aggregate.summary.output));
+    updateCalendarMetric(elements, "total", formatCompactNumber(getTotalTokens(aggregate.summary)));
+    updateCalendarMetric(elements, "input", formatCompactNumber(getInputTokens(aggregate.summary)));
+    updateCalendarMetric(elements, "output", formatCompactNumber(aggregate.summary.output));
     updateCalendarMetric(elements, "requests", formatNumber(aggregate.summary.requests));
+    updateCalendarMetric(elements, "cost", formatCosts(aggregate.summary.costs, true));
 
     const today = getToday();
     const nonzeroDates = [...aggregate.days.entries()]
@@ -702,7 +703,7 @@
       const cacheNote = state.cacheWriteFailed ? "，缓存写入失败" : "，已写入缓存";
       setCalendarStatus(
         elements,
-        `${monthText}，共 ${formatNumber(getTotalTokens(aggregate.summary))} Tokens${cacheNote}`,
+        `${monthText}，共 ${formatCompactNumber(getTotalTokens(aggregate.summary))} Tokens${cacheNote}`,
         state.cacheWriteFailed ? "error" : "success",
       );
     } catch (error) {
@@ -940,8 +941,7 @@
       #${ROOT_ID} .ds-tu-metric-value { margin-top: 5px; color: #1b252b; font-size: 16px; line-height: 1.25; font-weight: 700; white-space: nowrap; }
       #${ROOT_ID} .ds-tu-metric:first-child .ds-tu-metric-value { color: #087a59; }
       #${ROOT_ID} .ds-tu-metric:last-child .ds-tu-metric-value { color: #925d00; }
-      #${ROOT_ID} .ds-tu-calendar-metrics { grid-template-columns: 1.25fr 1.25fr 1fr 1fr; margin: 14px 0 0; }
-      #${ROOT_ID} .ds-tu-calendar-metrics .ds-tu-metric:last-child .ds-tu-metric-value { color: #1b252b; }
+      #${ROOT_ID} .ds-tu-calendar-metrics { grid-template-columns: 1.25fr 1.25fr 1fr 1fr 1fr; margin: 14px 0 0; }
       #${ROOT_ID} .ds-tu-weekdays,
       #${ROOT_ID} .ds-tu-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
       #${ROOT_ID} .ds-tu-weekdays { border: 1px solid #dbe2e5; border-bottom: 0; border-radius: 6px 6px 0 0; background: #f5f7f8; }
@@ -994,8 +994,10 @@
         #${ROOT_ID} .ds-tu-calendar-status-row { justify-content: space-between; min-height: 24px; }
         #${ROOT_ID} .ds-tu-calendar-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         #${ROOT_ID} .ds-tu-calendar-metrics .ds-tu-metric:nth-child(2) { border-right: 0; }
-        #${ROOT_ID} .ds-tu-calendar-metrics .ds-tu-metric:nth-child(3) { border-right: 1px solid #e5eaec; border-bottom: 0; }
-        #${ROOT_ID} .ds-tu-calendar-metrics .ds-tu-metric:nth-child(-n+2) { border-bottom: 1px solid #e5eaec; }
+        #${ROOT_ID} .ds-tu-calendar-metrics .ds-tu-metric:nth-child(3) { border-right: 1px solid #e5eaec; }
+        #${ROOT_ID} .ds-tu-calendar-metrics .ds-tu-metric:nth-child(4) { border-right: 0; }
+        #${ROOT_ID} .ds-tu-calendar-metrics .ds-tu-metric:nth-child(-n+4) { border-bottom: 1px solid #e5eaec; }
+        #${ROOT_ID} .ds-tu-calendar-metrics .ds-tu-metric:nth-child(5) { grid-column: 1 / -1; }
         #${ROOT_ID} .ds-tu-day { min-height: 66px; padding: 5px; gap: 3px; }
         #${ROOT_ID} .ds-tu-day-tokens { font-size: 12px; }
         #${ROOT_ID} .ds-tu-day-requests { display: none; }
@@ -1106,6 +1108,7 @@
                 <div class="ds-tu-metric"><div class="ds-tu-metric-label">输入 Tokens</div><div class="ds-tu-metric-value" data-calendar-metric="input">0</div></div>
                 <div class="ds-tu-metric"><div class="ds-tu-metric-label">输出 Tokens</div><div class="ds-tu-metric-value" data-calendar-metric="output">0</div></div>
                 <div class="ds-tu-metric"><div class="ds-tu-metric-label">API 请求</div><div class="ds-tu-metric-value" data-calendar-metric="requests">0</div></div>
+                <div class="ds-tu-metric"><div class="ds-tu-metric-label">本月花费</div><div class="ds-tu-metric-value" data-calendar-metric="cost">—</div></div>
               </div>
               <div class="ds-tu-day-detail">
                 <div class="ds-tu-day-detail-item"><div class="ds-tu-day-detail-label">日期</div><div class="ds-tu-day-detail-value ds-tu-day-date">—</div></div>
